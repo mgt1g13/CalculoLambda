@@ -43,8 +43,22 @@ subs x s (LamAbs y t1) = if ((x /= y) && not(elem y (freeVars s)))
                          then LamAbs y (subs x s t1)
                          else error "problem with subs in LamLamAbs"
 
---nsubs :: NTLam->NTLam->NTLam
---nsubs
+nSubs :: Integer->NTLam->NTLam->NTLam
+nSubs j s (NTVar k) = if (j==k) then s else (NTVar k)
+nSubs j s (NTLamAbs t1) = NTLamAbs (nSubs (j+1) (shifting s 0 1) t1)
+nSubs j s (NTApp t1 t2) = NTApp (nSubs j s t1) (nSubs j s t2)
+
+nEval :: NTLam->NTLam
+nEval = undefined
+
+
+shifting :: NTLam->Integer->Integer->NTLam
+shifting (NTVar k) cutoff d = if (k<cutoff) then (NTVar k) else (NTVar k+1)
+shifting (NTLamAbs t1) cutoff d = NTLamAbs (shifting t1 (cutoff+1) d)
+shifting (NTApp t1 t2) cutoff d = NTApp (shifting t1 cutoff d) (shifting t2 cutoff d)
+
+
+--interpret :: CalcLamb->[Char]->CalcLamb
 
 _toNameless :: CalcLamb->[Char]->NTLam
 _toNameless (Var x) gamma = NTVar (indexOf x gamma)
