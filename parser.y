@@ -22,7 +22,7 @@ import Data.Char
 CalcLamb : lam var '.' CalcLamb               { LamAbs $2 ( $4 ) }
          | lam var '.' '('CalcLamb')'         { LamAbs $2 ( $5 ) }
 	   | '(' lam var '.' '('CalcLamb')' ')' { ( LamAbs $3 ( $6 ) ) }
-	   | CalcLamb CalcLamb                  { ( LamApp $1 $2 ) }
+	   --| CalcLamb CalcLamb                  { ( LamApp $1 $2 ) }
 	   | '(' CalcLamb CalcLamb ')'          { ( LamApp $2 $3 ) }
 	   | '(' CalcLamb ')' '(' CalcLamb ')'  { ( LamApp $2 $5 ) }
 	   | '(' CalcLamb ')'  CalcLamb  { ( LamApp $2 $4 ) }
