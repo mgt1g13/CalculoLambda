@@ -1,5 +1,6 @@
 module Main where
 import ParserLambda
+import Debug.Trace
 
 -- sinteaxe LamAbstrata do calculo lambda
 
@@ -7,7 +8,7 @@ data NTLam
 		= NTLamAbs NTLam
 		| NTApp NTLam NTLam
 		| NTVar Integer
-	deriving Show
+	deriving (Eq, Show)
 
 
 _charNotInList :: Char->[Char]->Char
@@ -58,25 +59,46 @@ nsubs j (NTApp t1 t2) s = NTApp (nsubs j t1 s) (nsubs j t2 s)
 
 nIsVal :: NTLam->Bool
 nIsVal (NTVar x) = True
-nIsVal (NTLamAbs x) = True
-nIsVal _ = False
+--nIsVal (NTLamAbs x) = True
+nIsVal (NTLamAbs x) = nIsVal x
+nIsVal (NTApp (NTLamAbs x) t2) = False
+nIsVal (NTApp t1 t2) = (nIsVal t1) && (nIsVal t2)
+--nIsVal _ = False
 
 neval :: NTLam->NTLam
 neval (NTVar x) = NTVar x
-neval (NTLamAbs x) = NTLamAbs x
-neval (NTApp (NTLamAbs t1) t2) = (shifting (nsubs 0 t1 (shifting t2 0 1)) 0 (-1))
+neval (NTLamAbs x) =  (NTLamAbs (neval x))
+--neval (NTApp (NTLamAbs t1) t2) | trace ("\n1-> t1 = " ++ show (NTApp (NTLamAbs t1) t2)) False = undefined
+neval (NTApp (NTLamAbs t1) t2) = (neval (shifting (nsubs 0 t1 (shifting t2 0 1)) 0 (-1)))
+--neval (NTApp t1 t2) | trace ("\n2-> " ++ show (NTApp t1 t2)) False = undefined
 neval (NTApp t1 t2) = if (not (nIsVal  t1))
 						then let t0 = (neval t1)
-						 	in (NTApp t0 t2)
+						 	in neval (NTApp t0 t2)
 					else if(not (nIsVal t2))
 						 then (NTApp t1 (neval t2))
 					else
-						 (NTApp t1 t2)
+						(NTApp t1 t2)
+
+--neval :: NTLam->NTLam
+--neval (NTVar x) = NTVar x
+--neval (NTLamAbs x) = NTLamAbs (neval x)
+--neval (NTApp (NTLamAbs t1) t2) = neval ((shifting (nsubs 0 t1 (shifting t2 0 1)) 0 (-1)))
+--neval (NTApp t1 t2) = neval(NTApp (neval t1) (neval t2))
 
 --
+c0 = NTLamAbs(NTLamAbs (NTVar 0))
+c1 = NTLamAbs(NTLamAbs ((NTApp (NTVar 1) (NTVar 0))))
+c2 = NTLamAbs (NTLamAbs (NTApp (NTVar 1) (NTApp (NTVar 1) (NTVar 0))))
+c3 = NTLamAbs (NTLamAbs (NTApp (NTVar 1) (NTApp (NTVar 1) (NTApp (NTVar 1) (NTVar 0)))))
+suc =  (toNameless.parserlamb.lexer) ("(lam n .(lam s. (lam z. (s ((n s) z)))))")
+soma = NTLamAbs (NTApp (NTVar 0) (NTLamAbs (NTLamAbs (NTLamAbs (NTApp (NTVar 1) (NTApp (NTApp (NTVar 2) (NTVar 1)) (NTVar 0)))))))
+plus = (toNameless.parserlamb.lexer) "(lam m. (lam n . (lam s. (lam z . (m s) ((n s) z)))))"
+plus2 = (toNameless.parserlamb.lexer) "(lam m. (lam n . (lam s. (lam z . m s (n s z)))))"
+pow = NTLamAbs (NTLamAbs (NTApp (NTVar 0) (NTVar 1)))
 
-test = NTApp (NTLamAbs (NTLamAbs (NTApp (NTVar 0) (NTVar 1)))) (NTVar 0)
+testeTenso = "(lam m. (lam n . (lam s. (lam z . m s ((n s) z))))) (lam s. lam z . s (s z)) (lam s. lam z . s (s z))"
 
+times = NTLamAbs (NTLamAbs (NTApp (NTApp (NTVar 1) (NTApp plus (NTVar 0))) c0 ))
 
 _toNameless :: CalcLamb->[Char]->NTLam
 _toNameless (Var x) gamma = NTVar (indexOf x gamma)
@@ -91,6 +113,17 @@ namelessToNormal :: NTLam->[Char]->CalcLamb
 namelessToNormal (NTVar x) gamma = Var (gamma!! (fromIntegral x))
 namelessToNormal (NTLamAbs t) gamma = let c = (charNotInList gamma) in (LamAbs c (namelessToNormal t ([c]++gamma)))
 namelessToNormal (NTApp t1 t2) gamma = LamApp (namelessToNormal t1 gamma) (namelessToNormal t2 gamma)
+
+
+namelessToNumber :: NTLam->Integer
+namelessToNumber (NTVar x) = x
+namelessToNumber (NTLamAbs x) = namelessToNumber x
+namelessToNumber (NTApp t1 t2) = (namelessToNumber t1) + (namelessToNumber t2)
+
+
+
+--namelessToNumber :: NTLam->Integer
+--namelessToNumber b = _namelessToNumber b 0
 
 testeNameless :: NTLam->CalcLamb
 testeNameless l = namelessToNormal l ['a', 'b', 'c'] 
@@ -121,7 +154,8 @@ normalToString (Var x) = "("++ (x: ")")
 normalToString (LamAbs x t) = "(lam " ++ [x] ++ "." ++ "(" ++ (normalToString t) ++ ")"
 normalToString (LamApp t1 t2) = "(" ++ (normalToString t1) ++ ")" ++ " (" ++ (normalToString t2) ++ ")"
 
-test2 = "(lam n .(lam s. (lam z. (s ((n s) z))))) (w)"
+--test2 = "(lam n .(lam s. (lam z. (s ((n s) z))))) (w)"
+
 
 
 --test :: CalcLamb"

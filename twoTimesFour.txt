@@ -1,0 +1,1 @@
+(lam m. lam n . m n) (lam s. lam z . s (s z)) (lam s. lam z . (s(s(s (s z)))))
